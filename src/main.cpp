@@ -264,10 +264,14 @@ void loop() {
   //Display the second row
   lcd.setCursor(0,1);
   lcd.print("Next: ");
-  lcd.print(alarmHour, DEC);
-  lcd.print(":");
-  lcd.print(alarmMinutes, DEC);
-  lcd.print(" ");
+  if(alarmHour!=-1){
+    lcd.print(alarmHour, DEC);
+    lcd.print(":");
+    lcd.print(alarmMinutes, DEC);
+    lcd.print(" ");
+  }else{
+    lcd.print("None ");
+  }
   lcd.print(displayCode);
 
   if(now.Second() == 0 && timeFlag == true){
