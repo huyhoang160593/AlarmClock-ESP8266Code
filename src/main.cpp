@@ -53,7 +53,7 @@ String httpGETRequest(const char* serverName) {
   {
     httpResponseCode = http.GET();
   
-    if (httpResponseCode == 200) {
+    if (httpResponseCode == 200 && httpResponseCode == 204) {
       Serial.println("HTTP Response code: ");
       Serial.println(httpResponseCode);
       payload = http.getString();
@@ -166,36 +166,49 @@ void morseCodeDash(){
 
 void successBuzzer(){
   // ... ..- -.-. -.-. . ... ...
+  lcd.print("S");
   morseCodeDot(); morseCodeDot(); morseCodeDot(); //S
   delay(300);
+  lcd.print("U");
   morseCodeDot(); morseCodeDot(); morseCodeDash(); //U
   delay(300);
+  lcd.print("C");
   morseCodeDash(); morseCodeDot(); morseCodeDash(); morseCodeDot(); //C
   delay(300);
+  lcd.print("C");
   morseCodeDash(); morseCodeDot(); morseCodeDash(); morseCodeDot(); //C
   delay(300);
+  lcd.print("E");
   morseCodeDot(); //E
   delay(300);
+  lcd.print("S");
   morseCodeDot(); morseCodeDot(); morseCodeDot(); morseCodeDot(); //S
   delay(300);
+  lcd.print("S");
   morseCodeDot(); morseCodeDot(); morseCodeDot(); morseCodeDot(); //S
 }
 
 void messageBuzzer(){
   // -- . ... ... .- --. .
-  lcd.print("Code comming...");
+  lcd.print("M");
   morseCodeDash(); morseCodeDash(); //M
   delay(300);
+  lcd.print("E");
   morseCodeDot(); // E
-  delay(300);  
+  delay(300);
+  lcd.print("S");  
   morseCodeDot(); morseCodeDot(); morseCodeDot(); // S
   delay(300);
+  lcd.print("S");
   morseCodeDot(); morseCodeDot(); morseCodeDot(); // S
   delay(300);
+  lcd.print("A");
   morseCodeDot(); morseCodeDash(); // A
   delay(300);
+  lcd.print("G");
   morseCodeDash(); morseCodeDash(); morseCodeDot(); // G
   delay(300);
+  lcd.print("E");
   morseCodeDot(); // E
 }
 
