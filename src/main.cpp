@@ -49,25 +49,25 @@ String httpGETRequest(const char* serverName) {
   int httpResponseCode = 0;
   String payload = "{}"; 
   // Send HTTP POST request
-  while ( httpResponseCode != 200)
-  {
+  while (true){
+
     httpResponseCode = http.GET();
-  
-    if (httpResponseCode == 200 && httpResponseCode == 204) {
+
+    if (httpResponseCode == 200 || httpResponseCode == 204) {
       Serial.println("HTTP Response code: ");
       Serial.println(httpResponseCode);
       payload = http.getString();
-    } else {
+      // Free resources
+      http.end();
+      return payload;
+
+    }else {
       Serial.println("Error code: ");
       Serial.println(httpResponseCode);
-      Serial.println("Reset GET...");
+      lcd.clear();
+      lcd.print("Reset GET...");
     }
-  }
-  
-  // Free resources
-  http.end();
-
-  return payload;
+  } 
 }
 
 //convert const char* to char* and store is in the value
