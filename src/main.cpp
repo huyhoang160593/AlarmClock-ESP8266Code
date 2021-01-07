@@ -1,20 +1,17 @@
 #include <Arduino.h>
-
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
-
 #include <WiFiManager.h>
 #include <LiquidCrystal_I2C.h>
 #include <RtcDS1307.h>
 #include <Wire.h>
 
-//Tomorrow will be finish
 
 RtcDS1307<TwoWire> Rtc(Wire);
 
 const unsigned char Active_buzzer = 14;
-const char* serverSetupTime = "https://alarmmessagex.herokuapp.com/api/alarmMessages/setup";
-const char* getNearestAlarm = "https://alarmmessagex.herokuapp.com/api/alarmMessages/nearest";
+const char* serverSetupTime = "https://keepurlshort.herokuapp.com/api/alarmMessages/setup";
+const char* getNearestAlarm = "https://keepurlshort.herokuapp.com/api/alarmMessages/nearest";
 
 unsigned long lastTime = 0;
 // Timer set to 10 minutes (600000)
