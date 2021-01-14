@@ -5,7 +5,8 @@
 #include <LiquidCrystal_I2C.h>
 #include <RtcDS1307.h>
 #include <Wire.h>
-
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 RtcDS1307<TwoWire> Rtc(Wire);
 
@@ -19,7 +20,12 @@ unsigned long timerDelay = 600000;
 // Set timer to 5 seconds (5000)
 unsigned long timerDelay5s = 5000;
 
-bool timeFlag = false;
+bool clockFlag = true;
+
+//Get the time from wifi - fix the issue if the RTCDS broken
+const long utcOffsetInSeconds = 25200;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
 //Make a document to hold the JSON and can be access later
 StaticJsonDocument<200> doc;
@@ -77,6 +83,7 @@ char* copy(const char* origin) {
 //malloc the memory to address a char*, after using this you should free the buffer with free(char*)
 char* tranformString(const char* url){
   String sensorReadings = httpGETRequest(url);
+  Serial.println("The payload you get are:");
   Serial.println(sensorReadings);
 
   //Config the string into char array to make it readable with the ArduinoJson
@@ -90,7 +97,17 @@ char* tranformString(const char* url){
 
 bool setupTime(){
 
-  lcd.print("Get Time...");
+  lcd.print("Get Time");
+  Rtc.Begin();
+  Rtc.SetIsRunning(true);
+  lcd.print(".");
+  if(!Rtc.GetIsRunning()){
+    Serial.println("This RTC DS1307 is broken");
+    lcd.clear();
+    lcd.print(".");
+    lcd.print(".");
+    return false;
+  }
   //Change the JSON get from internet into a char*
   char* timeJSON = tranformString(serverSetupTime);
 
@@ -102,7 +119,7 @@ bool setupTime(){
     Serial.println(error.c_str());
     return false;
   }
-
+  lcd.print(".");
   //access the JSON document and save the value in it
   int year = doc["year"];
   int month = doc["month"];
@@ -113,15 +130,12 @@ bool setupTime(){
 
   lcd.clear();
   lcd.print("Setup time...");
-  Rtc.Begin();
 
   RtcDateTime datetime(year,month,day,hours,minutes,seconds);
 
   Rtc.SetDateTime(datetime);
-  Rtc.SetIsRunning(true);
-
+  lcd.print(".");
   lcd.clear();
-  timeFlag = true;
   return true;
 }
 
@@ -136,14 +150,17 @@ bool setupAlarm(){
     Serial.println(errorAlarm.c_str());
     return false;
   }
-
+  lcd.print(".");
   //set the value for alarm
   alarmHour = doc["hours"];
   alarmMinutes = doc["minutes"];
+
+  lcd.print(".");
   //ArduinoJson returns keys and values as const char* so what we do here is try to convert is to char* for our purpose
   const char* constCodeMessage = doc["code"];
   codeMessage = copy(constCodeMessage);
 
+  lcd.print(".");
   return true;
 }
 
@@ -163,6 +180,7 @@ void morseCodeDash(){
 
 void successBuzzer(){
   // ... ..- -.-. -.-. . ... ...
+  lcd.clear();
   lcd.print("S");
   morseCodeDot(); morseCodeDot(); morseCodeDot(); //S
   delay(300);
@@ -187,6 +205,7 @@ void successBuzzer(){
 
 void messageBuzzer(){
   // -- . ... ... .- --. .
+  lcd.clear();
   lcd.print("M");
   morseCodeDash(); morseCodeDash(); //M
   delay(300);
@@ -241,66 +260,69 @@ void setup() {
   
   if(setupTime()){
     lcd.print("Time done...");
+    lcd.clear();
+
+  } else{
+    lcd.println("failed, useNTPClient");
+    timeClient.begin();
+    Serial.println("Use NTPClient instead");
+    clockFlag = false;
+    delay(1000);
+    lcd.clear();
   }
-
-  lcd.clear();
-
   //Get the nearest alarm in setup
-  lcd.print("Set the alarm..");
-
+  lcd.print("Set the alarm");
   if(setupAlarm()){
+    lcd.clear();
     lcd.print("Alarm done...");
   }
 
-  //finish the setup
-  lcd.clear();
-
-  lcd.print("All done...");
   delay(3000);
 }  // end of setup
 
 
 void loop() {
-  RtcDateTime now = Rtc.GetDateTime();
+  int hour,minutes,second;
+  if(clockFlag){
+    RtcDateTime now = Rtc.GetDateTime();
+    hour = now.Hour();
+    minutes = now.Minute();
+    second = now.Second();
+  } else {
+    timeClient.update();
+    hour = timeClient.getHours();
+    minutes = timeClient.getMinutes();
+    second = timeClient.getSeconds();
+  }
+
   //Display the first row
-  lcd.setCursor(0,0);
-  lcd.print("Time: ");
-  lcd.print(now.Hour(), DEC);
-  lcd.print(':');
-  lcd.print(now.Minute(), DEC);
-  lcd.print(':');
-  lcd.print(now.Second(), DEC);
+    lcd.setCursor(0,0); 
+    lcd.print("Time: "); 
+    lcd.print(hour, DEC); 
+    lcd.print(':'); 
+    lcd.print(minutes, DEC); 
+    lcd.print(':'); 
+    lcd.print(second, DEC);  
+    lcd.print("   ");
 
-  //Display the second row
-  lcd.setCursor(0,1);
-  lcd.print("Next: ");
-  if(alarmHour!=-1){
-    lcd.print(alarmHour, DEC);
-    lcd.print(":");
-    lcd.print(alarmMinutes, DEC);
-    lcd.print(" ");
-  }else{
-    lcd.print("None ");
-  }
-  lcd.print(displayCode);
+    //Display the second row
+    lcd.setCursor(0,1);
+    lcd.print("Next: ");
+    if(alarmHour!=-1){
+      lcd.print(alarmHour, DEC); lcd.print(":"); lcd.print(alarmMinutes, DEC); lcd.print("  ");
+    }else{
+      lcd.print("None ");
+    }
+    lcd.print(displayCode);
 
-  if(now.Second() == 0 && timeFlag == true){
-    lcd.clear();
-    timeFlag = false;
-  } else if (now.Second() == 1 && timeFlag == false){
-    timeFlag = true;
-  }
-
-  //When the alarm come, display the code and reset the counter for update alarm(defect)
-  if(now.Hour() == alarmHour && now.Minute() == alarmMinutes){
-    messageBuzzer();
-
-    displayCode = codeMessage;
-
-    lastTime = millis();
-    alarmHour = -1;
-    alarmMinutes = -1;
-  }
+    //When the alarm come, display the code and reset the counter for update alarm(defect)
+    if(hour == alarmHour && minutes == alarmMinutes){
+      messageBuzzer();
+      displayCode = codeMessage;
+      lastTime = millis();
+      alarmHour = -1;
+      alarmMinutes = -1;
+    }
 
   // Update alarm every 10 minutes
   if ((millis() - lastTime) > timerDelay) {
